@@ -11,6 +11,8 @@ class Ant():
         self.images = images
         self.indexCurrentImage = 0
         self.angle = angle
+        self.isMoving = False
+        self.targetQueue = []
 
     def setXY(self, x, y):
         self.x = x
@@ -26,5 +28,9 @@ class Ant():
 
     def __str__(self):
         return "Ant: {self.attack} {self.speed} {self.pv} {self.stamina}"
+    
+    def stopMovement(self):
+        self.isMoving = False  
+        self.targetQueue.clear()  
 
 
