@@ -1,107 +1,109 @@
+import tkinter as tk 
+from random import randint
 import math
-import tkinter as tk
-from PIL import Image, ImageTk 
+
 from Ant import Ant
+from AntDisplay import AntDisplay
 
 class Window(tk.Tk):
+    WIDTH = 800
+    HEIGHT = 600
+
     def __init__(self):
         super().__init__()
         self.title('Algorithme génétique')
-        self.canvas = tk.Canvas(self, width=800, height=600)
+        self.canvas = tk.Canvas(self, width=self.WIDTH, height=self.HEIGHT)
         self.canvas.pack()
 
-        self.antImages = [
-            Image.open("./imgs/ant1.png").resize((50, 50)), 
-            Image.open("./imgs/ant2.png").resize((50, 50)),
-            Image.open("./imgs/ant3.png").resize((50, 50))
-        ]
+        self.food = []
+        self.ant = Ant(400, 400, 0, 0, 0, 0, 200)
+        self.antDisplay = AntDisplay(self.canvas, self.ant)
+                
+        self.generateFood()
+        self.animateAnt()
+        self.startAnt()
 
-        self.ant = Ant(100, 100, 0, 0, 0, 0, self.antImages)
-        self.ant2 = Ant(200, 300, 0, 0, 0, 0, self.antImages)
+    def animateAnt(self):
+        self.antDisplay.nextImage()
+        self.antDisplay.updatePosition()
+        self.after(100, self.animateAnt)
 
-        idImage = self.showAnt(self.ant)
-        idImage2 = self.showAnt(self.ant2)
+    def getRandomNewTarget(self):
+        newTarget = (randint(0, self.WIDTH), randint(0, self.HEIGHT))
         
-        self.animateAnt(self.ant, idImage)
-        # self.animateAnt(self.ant2, idImage2)
-        
-        # self.moveAnt(self.ant, idImage, 300, 100)
-        # self.moveAnt(self.ant, idImage, 500, 500)
-        # self.moveAnt(self.ant, idImage, 500, 10)
-        
-        # self.moveAnt(self.ant2, idImage, 100, 10)
-        # self.moveAnt(self.ant2, idImage, 500, 101)
-        # self.moveAnt(self.ant2, idImage, 200, 310)
-        
-    def showAnt(self, ant):
-        print(ant)
-        antImage = ImageTk.PhotoImage(self.antImages[ant.indexCurrentImage].rotate(ant.angle))
-        idImage = self.canvas.create_image(ant.x, ant.y, image=antImage)
-        
-        if not hasattr(self, 'antImagesReferences'):
-            self.antImagesReferences = []
-        self.antImagesReferences.append(antImage)
-        
-        return idImage
+        return newTarget 
 
-    def animateAnt(self, ant, idImage):
-        ant.nextImage()
-        antImage = ImageTk.PhotoImage(self.antImages[ant.indexCurrentImage].rotate(ant.angle))
-        self.canvas.itemconfig(idImage, image=antImage)
-        self.canvas.image = antImage  
-        self.after(100, self.animateAnt, ant, idImage)
+    def checkFoodInRadius(self, radius):
+        for food in self.food:
+            distance = math.sqrt((food[0] - self.ant.x) ** 2 + (food[1] - self.ant.y) ** 2)
+            if distance <= radius:
+                return food
+        return None
 
-    def moveAnt(self, ant, idImageAnt, targetX, targetY, stopPrevious=False):
-        if stopPrevious:
-            ant.isMoving = False
-            ant.targetQueue.clear()
+    def startAnt(self):
+        food = self.checkFoodInRadius(self.ant.range) 
+        if food:
+            if math.sqrt((food[0] - self.ant.x) ** 2 + (food[1] - self.ant.y) ** 2) <= 10:        
+                self.removeFood(food)            
+                self.ant.score += 1
+                self.generateFood()
+            newTarget = (food[0], food[1])
+        else:
+            self.ant.targetQueue = []
+            newTarget = self.getRandomNewTarget()
+            self.ant.history.append(newTarget)
+                
+        self.moveAnt(newTarget[0], newTarget[1])
 
-        if ant.isMoving:
-            ant.targetQueue.append((targetX, targetY))
+    def moveAnt(self, targetX, targetY):
+        if self.ant.isMoving:
+            self.ant.targetQueue.append((targetX, targetY))
             return
 
-        ant.isMoving = True
+        self.ant.isMoving = True
 
         def update_position():
-            nonlocal targetX, targetY, ant, idImageAnt
-
-            differenceX = targetX - ant.x
-            differenceY = targetY - ant.y
-            # coeffDiff = 1 if differenceY == 0 else 1 - (differenceX / differenceY)
-
-            # Calculer l'angle
-            angle = math.degrees(math.atan2(differenceX,differenceY)) - 180
-            ant.angle = angle
-
-            # Mettre à jour l'image de la fourmi avec le nouvel angle
-            antImage = ImageTk.PhotoImage(self.antImages[ant.indexCurrentImage].rotate(ant.angle))
-            self.canvas.itemconfig(idImageAnt, image=antImage)
-            self.canvas.image = antImage
-
-            # Distance entre la fourmi et la cible
+            if len(self.ant.history) == 0 or math.sqrt((self.ant.history[-1][0] - self.ant.x) ** 2 + (self.ant.history[-1][1] - self.ant.y) ** 2) > self.ant.range:
+                self.ant.history.append((self.ant.x, self.ant.y))
+                x = self.ant.x
+                y = self.ant.y
+                self.canvas.create_oval(x, y, x + 10, y + 10, fill='blue')
+            
+            differenceX = targetX - self.ant.x
+            differenceY = targetY - self.ant.y
             distance = math.sqrt(differenceX ** 2 + differenceY ** 2)
 
-            # Déplacement proportionnel à la distance, ici avec un pas fixe
-            step_size = 2  # Ajuster la vitesse ici
-            if distance > step_size:
-                ant.x += (differenceX / distance) * step_size
-                ant.y += (differenceY / distance) * step_size
+            if distance > 2:
+                self.ant.x += (differenceX / distance) * 2
+                self.ant.y += (differenceY / distance) * 2
             else:
-                ant.x, ant.y = targetX, targetY  # La fourmi a atteint la cible
+                self.ant.x, self.ant.y = targetX, targetY
+            
+            self.ant.angle = math.degrees(math.atan2(differenceX, differenceY)) - 180
+            self.antDisplay.updateImageAngle()
+            self.antDisplay.updatePosition()
 
-            # Mettre à jour la position de la fourmi sur le canvas
-            self.canvas.coords(idImageAnt, ant.x, ant.y)
-
-            # Vérifier si la fourmi a atteint la cible
-            if abs(ant.x - targetX) < 1 and abs(ant.y - targetY) < 1:
-                ant.isMoving = False  # La fourmi a atteint la cible
-                if ant.targetQueue:
-                    nextTarget = ant.targetQueue.pop(0)
-                    self.moveAnt(ant, idImageAnt, nextTarget[0], nextTarget[1])
+            if distance > 2:
+                self.after(10, update_position)
             else:
-                self.after(10, update_position)  # Reprogrammer pour continuer le mouvement
+                self.ant.isMoving = False
+                if self.ant.targetQueue:
+                    nextTarget = self.ant.targetQueue.pop(0)
+                    self.moveAnt(nextTarget[0], nextTarget[1])
+                else:
+                    self.startAnt()
 
         update_position()
+
+    def generateFood(self):
+        x, y = randint(0, self.WIDTH), randint(0, self.HEIGHT)
+        foodId = self.canvas.create_oval(x, y, x + 10, y + 20, fill='brown')
+        self.food.append((x, y, foodId))
+
+    def removeFood(self, food):
+        self.canvas.delete(food[2])
+        self.food.remove(food)
+
 
 if __name__ == "__main__":
     w = Window()
