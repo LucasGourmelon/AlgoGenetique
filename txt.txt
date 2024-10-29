@@ -1,3 +1,0 @@
-angle: -45
-centre x: 370
-centre y: 335
