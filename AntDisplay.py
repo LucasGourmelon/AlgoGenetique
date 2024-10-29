@@ -13,16 +13,16 @@ class AntDisplay:
         self.indexCurrentImage = 0
         self.image_id = self.canvas.create_image(ant.x, ant.y, image=self.tk_images[self.indexCurrentImage])
 
-    def nextImage(self):
+    def next_image(self):
         self.indexCurrentImage = (self.indexCurrentImage + 1) % len(self.tk_images)
 
-    def getTkImage(self):
+    def get_tk_image(self):
         return self.tk_images[self.indexCurrentImage]
 
-    def updatePosition(self):
+    def update_position(self):
         self.canvas.coords(self.image_id, self.ant.x, self.ant.y)
-        self.canvas.itemconfig(self.image_id, image=self.getTkImage())  
+        self.canvas.itemconfig(self.image_id, image=self.get_tk_image())
     
-    def updateImageAngle(self):
+    def update_image_angle(self):
         self.tk_images[self.indexCurrentImage] = ImageTk.PhotoImage(self.images[self.indexCurrentImage].rotate(self.ant.angle))
-        self.canvas.itemconfig(self.image_id, image=self.getTkImage())
+        self.canvas.itemconfig(self.image_id, image=self.get_tk_image())
